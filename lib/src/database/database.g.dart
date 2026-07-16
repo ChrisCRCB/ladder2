@@ -724,7 +724,16 @@ class $GameSetsTable extends GameSets with TableInfo<$GameSetsTable, GameSet> {
     ),
   );
   @override
-  List<GeneratedColumn> get $columns => [id, gameId];
+  late final GeneratedColumnWithTypeConverter<WinningPlayer, int>
+  winningPlayer = GeneratedColumn<int>(
+    'winning_player',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  ).withConverter<WinningPlayer>($GameSetsTable.$converterwinningPlayer);
+  @override
+  List<GeneratedColumn> get $columns => [id, gameId, winningPlayer];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -765,6 +774,12 @@ class $GameSetsTable extends GameSets with TableInfo<$GameSetsTable, GameSet> {
         DriftSqlType.int,
         data['${effectivePrefix}game_id'],
       )!,
+      winningPlayer: $GameSetsTable.$converterwinningPlayer.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}winning_player'],
+        )!,
+      ),
     );
   }
 
@@ -772,6 +787,9 @@ class $GameSetsTable extends GameSets with TableInfo<$GameSetsTable, GameSet> {
   $GameSetsTable createAlias(String alias) {
     return $GameSetsTable(attachedDatabase, alias);
   }
+
+  static JsonTypeConverter2<WinningPlayer, int, int> $converterwinningPlayer =
+      const EnumIndexConverter<WinningPlayer>(WinningPlayer.values);
 }
 
 class GameSet extends DataClass implements Insertable<GameSet> {
@@ -780,17 +798,37 @@ class GameSet extends DataClass implements Insertable<GameSet> {
 
   /// The ID of the game this set is part of.
   final int gameId;
-  const GameSet({required this.id, required this.gameId});
+
+  /// Which player won this set.
+  ///
+  /// If [winningPlayer] is [WinningPlayer.player1], then the winner is the
+  /// `player1Id` from the [EventGame]. Of it is [WinningPlayer.player2], then
+  /// `player2Id`.
+  final WinningPlayer winningPlayer;
+  const GameSet({
+    required this.id,
+    required this.gameId,
+    required this.winningPlayer,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['game_id'] = Variable<int>(gameId);
+    {
+      map['winning_player'] = Variable<int>(
+        $GameSetsTable.$converterwinningPlayer.toSql(winningPlayer),
+      );
+    }
     return map;
   }
 
   GameSetsCompanion toCompanion(bool nullToAbsent) {
-    return GameSetsCompanion(id: Value(id), gameId: Value(gameId));
+    return GameSetsCompanion(
+      id: Value(id),
+      gameId: Value(gameId),
+      winningPlayer: Value(winningPlayer),
+    );
   }
 
   factory GameSet.fromJson(
@@ -801,6 +839,9 @@ class GameSet extends DataClass implements Insertable<GameSet> {
     return GameSet(
       id: serializer.fromJson<int>(json['id']),
       gameId: serializer.fromJson<int>(json['gameId']),
+      winningPlayer: $GameSetsTable.$converterwinningPlayer.fromJson(
+        serializer.fromJson<int>(json['winningPlayer']),
+      ),
     );
   }
   @override
@@ -809,15 +850,25 @@ class GameSet extends DataClass implements Insertable<GameSet> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'gameId': serializer.toJson<int>(gameId),
+      'winningPlayer': serializer.toJson<int>(
+        $GameSetsTable.$converterwinningPlayer.toJson(winningPlayer),
+      ),
     };
   }
 
-  GameSet copyWith({int? id, int? gameId}) =>
-      GameSet(id: id ?? this.id, gameId: gameId ?? this.gameId);
+  GameSet copyWith({int? id, int? gameId, WinningPlayer? winningPlayer}) =>
+      GameSet(
+        id: id ?? this.id,
+        gameId: gameId ?? this.gameId,
+        winningPlayer: winningPlayer ?? this.winningPlayer,
+      );
   GameSet copyWithCompanion(GameSetsCompanion data) {
     return GameSet(
       id: data.id.present ? data.id.value : this.id,
       gameId: data.gameId.present ? data.gameId.value : this.gameId,
+      winningPlayer: data.winningPlayer.present
+          ? data.winningPlayer.value
+          : this.winningPlayer,
     );
   }
 
@@ -825,42 +876,60 @@ class GameSet extends DataClass implements Insertable<GameSet> {
   String toString() {
     return (StringBuffer('GameSet(')
           ..write('id: $id, ')
-          ..write('gameId: $gameId')
+          ..write('gameId: $gameId, ')
+          ..write('winningPlayer: $winningPlayer')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, gameId);
+  int get hashCode => Object.hash(id, gameId, winningPlayer);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is GameSet && other.id == this.id && other.gameId == this.gameId);
+      (other is GameSet &&
+          other.id == this.id &&
+          other.gameId == this.gameId &&
+          other.winningPlayer == this.winningPlayer);
 }
 
 class GameSetsCompanion extends UpdateCompanion<GameSet> {
   final Value<int> id;
   final Value<int> gameId;
+  final Value<WinningPlayer> winningPlayer;
   const GameSetsCompanion({
     this.id = const Value.absent(),
     this.gameId = const Value.absent(),
+    this.winningPlayer = const Value.absent(),
   });
   GameSetsCompanion.insert({
     this.id = const Value.absent(),
     required int gameId,
-  }) : gameId = Value(gameId);
+    required WinningPlayer winningPlayer,
+  }) : gameId = Value(gameId),
+       winningPlayer = Value(winningPlayer);
   static Insertable<GameSet> custom({
     Expression<int>? id,
     Expression<int>? gameId,
+    Expression<int>? winningPlayer,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (gameId != null) 'game_id': gameId,
+      if (winningPlayer != null) 'winning_player': winningPlayer,
     });
   }
 
-  GameSetsCompanion copyWith({Value<int>? id, Value<int>? gameId}) {
-    return GameSetsCompanion(id: id ?? this.id, gameId: gameId ?? this.gameId);
+  GameSetsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? gameId,
+    Value<WinningPlayer>? winningPlayer,
+  }) {
+    return GameSetsCompanion(
+      id: id ?? this.id,
+      gameId: gameId ?? this.gameId,
+      winningPlayer: winningPlayer ?? this.winningPlayer,
+    );
   }
 
   @override
@@ -872,6 +941,11 @@ class GameSetsCompanion extends UpdateCompanion<GameSet> {
     if (gameId.present) {
       map['game_id'] = Variable<int>(gameId.value);
     }
+    if (winningPlayer.present) {
+      map['winning_player'] = Variable<int>(
+        $GameSetsTable.$converterwinningPlayer.toSql(winningPlayer.value),
+      );
+    }
     return map;
   }
 
@@ -879,7 +953,197 @@ class GameSetsCompanion extends UpdateCompanion<GameSet> {
   String toString() {
     return (StringBuffer('GameSetsCompanion(')
           ..write('id: $id, ')
-          ..write('gameId: $gameId')
+          ..write('gameId: $gameId, ')
+          ..write('winningPlayer: $winningPlayer')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PointsResetsTable extends PointsResets
+    with TableInfo<$PointsResetsTable, PointsReset> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PointsResetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _whenMeta = const VerificationMeta('when');
+  @override
+  late final GeneratedColumn<DateTime> when = GeneratedColumn<DateTime>(
+    'when',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, when];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'points_resets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PointsReset> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('when')) {
+      context.handle(
+        _whenMeta,
+        when.isAcceptableOrUnknown(data['when']!, _whenMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PointsReset map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PointsReset(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      when: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}when'],
+      )!,
+    );
+  }
+
+  @override
+  $PointsResetsTable createAlias(String alias) {
+    return $PointsResetsTable(attachedDatabase, alias);
+  }
+}
+
+class PointsReset extends DataClass implements Insertable<PointsReset> {
+  /// The primary key.
+  final int id;
+
+  /// The date when the reset was enacted.
+  final DateTime when;
+  const PointsReset({required this.id, required this.when});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['when'] = Variable<DateTime>(when);
+    return map;
+  }
+
+  PointsResetsCompanion toCompanion(bool nullToAbsent) {
+    return PointsResetsCompanion(id: Value(id), when: Value(when));
+  }
+
+  factory PointsReset.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PointsReset(
+      id: serializer.fromJson<int>(json['id']),
+      when: serializer.fromJson<DateTime>(json['when']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'when': serializer.toJson<DateTime>(when),
+    };
+  }
+
+  PointsReset copyWith({int? id, DateTime? when}) =>
+      PointsReset(id: id ?? this.id, when: when ?? this.when);
+  PointsReset copyWithCompanion(PointsResetsCompanion data) {
+    return PointsReset(
+      id: data.id.present ? data.id.value : this.id,
+      when: data.when.present ? data.when.value : this.when,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PointsReset(')
+          ..write('id: $id, ')
+          ..write('when: $when')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, when);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PointsReset && other.id == this.id && other.when == this.when);
+}
+
+class PointsResetsCompanion extends UpdateCompanion<PointsReset> {
+  final Value<int> id;
+  final Value<DateTime> when;
+  const PointsResetsCompanion({
+    this.id = const Value.absent(),
+    this.when = const Value.absent(),
+  });
+  PointsResetsCompanion.insert({
+    this.id = const Value.absent(),
+    this.when = const Value.absent(),
+  });
+  static Insertable<PointsReset> custom({
+    Expression<int>? id,
+    Expression<DateTime>? when,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (when != null) 'when': when,
+    });
+  }
+
+  PointsResetsCompanion copyWith({Value<int>? id, Value<DateTime>? when}) {
+    return PointsResetsCompanion(id: id ?? this.id, when: when ?? this.when);
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (when.present) {
+      map['when'] = Variable<DateTime>(when.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PointsResetsCompanion(')
+          ..write('id: $id, ')
+          ..write('when: $when')
           ..write(')'))
         .toString();
   }
@@ -892,6 +1156,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LadderEventsTable ladderEvents = $LadderEventsTable(this);
   late final $EventGamesTable eventGames = $EventGamesTable(this);
   late final $GameSetsTable gameSets = $GameSetsTable(this);
+  late final $PointsResetsTable pointsResets = $PointsResetsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -901,6 +1166,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     ladderEvents,
     eventGames,
     gameSets,
+    pointsResets,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -1853,9 +2119,17 @@ typedef $$EventGamesTableProcessedTableManager =
       })
     >;
 typedef $$GameSetsTableCreateCompanionBuilder =
-    GameSetsCompanion Function({Value<int> id, required int gameId});
+    GameSetsCompanion Function({
+      Value<int> id,
+      required int gameId,
+      required WinningPlayer winningPlayer,
+    });
 typedef $$GameSetsTableUpdateCompanionBuilder =
-    GameSetsCompanion Function({Value<int> id, Value<int> gameId});
+    GameSetsCompanion Function({
+      Value<int> id,
+      Value<int> gameId,
+      Value<WinningPlayer> winningPlayer,
+    });
 
 final class $$GameSetsTableReferences
     extends BaseReferences<_$AppDatabase, $GameSetsTable, GameSet> {
@@ -1891,6 +2165,12 @@ class $$GameSetsTableFilterComposer
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<WinningPlayer, WinningPlayer, int>
+  get winningPlayer => $composableBuilder(
+    column: $table.winningPlayer,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
   $$EventGamesTableFilterComposer get gameId {
@@ -1931,6 +2211,11 @@ class $$GameSetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get winningPlayer => $composableBuilder(
+    column: $table.winningPlayer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$EventGamesTableOrderingComposer get gameId {
     final $$EventGamesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -1966,6 +2251,12 @@ class $$GameSetsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<WinningPlayer, int> get winningPlayer =>
+      $composableBuilder(
+        column: $table.winningPlayer,
+        builder: (column) => column,
+      );
 
   $$EventGamesTableAnnotationComposer get gameId {
     final $$EventGamesTableAnnotationComposer composer = $composerBuilder(
@@ -2021,10 +2312,22 @@ class $$GameSetsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> gameId = const Value.absent(),
-              }) => GameSetsCompanion(id: id, gameId: gameId),
+                Value<WinningPlayer> winningPlayer = const Value.absent(),
+              }) => GameSetsCompanion(
+                id: id,
+                gameId: gameId,
+                winningPlayer: winningPlayer,
+              ),
           createCompanionCallback:
-              ({Value<int> id = const Value.absent(), required int gameId}) =>
-                  GameSetsCompanion.insert(id: id, gameId: gameId),
+              ({
+                Value<int> id = const Value.absent(),
+                required int gameId,
+                required WinningPlayer winningPlayer,
+              }) => GameSetsCompanion.insert(
+                id: id,
+                gameId: gameId,
+                winningPlayer: winningPlayer,
+              ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
@@ -2092,6 +2395,131 @@ typedef $$GameSetsTableProcessedTableManager =
       GameSet,
       PrefetchHooks Function({bool gameId})
     >;
+typedef $$PointsResetsTableCreateCompanionBuilder =
+    PointsResetsCompanion Function({Value<int> id, Value<DateTime> when});
+typedef $$PointsResetsTableUpdateCompanionBuilder =
+    PointsResetsCompanion Function({Value<int> id, Value<DateTime> when});
+
+class $$PointsResetsTableFilterComposer
+    extends Composer<_$AppDatabase, $PointsResetsTable> {
+  $$PointsResetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get when => $composableBuilder(
+    column: $table.when,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PointsResetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PointsResetsTable> {
+  $$PointsResetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get when => $composableBuilder(
+    column: $table.when,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PointsResetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PointsResetsTable> {
+  $$PointsResetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get when =>
+      $composableBuilder(column: $table.when, builder: (column) => column);
+}
+
+class $$PointsResetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PointsResetsTable,
+          PointsReset,
+          $$PointsResetsTableFilterComposer,
+          $$PointsResetsTableOrderingComposer,
+          $$PointsResetsTableAnnotationComposer,
+          $$PointsResetsTableCreateCompanionBuilder,
+          $$PointsResetsTableUpdateCompanionBuilder,
+          (
+            PointsReset,
+            BaseReferences<_$AppDatabase, $PointsResetsTable, PointsReset>,
+          ),
+          PointsReset,
+          PrefetchHooks Function()
+        > {
+  $$PointsResetsTableTableManager(_$AppDatabase db, $PointsResetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PointsResetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PointsResetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PointsResetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> when = const Value.absent(),
+              }) => PointsResetsCompanion(id: id, when: when),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> when = const Value.absent(),
+              }) => PointsResetsCompanion.insert(id: id, when: when),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PointsResetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PointsResetsTable,
+      PointsReset,
+      $$PointsResetsTableFilterComposer,
+      $$PointsResetsTableOrderingComposer,
+      $$PointsResetsTableAnnotationComposer,
+      $$PointsResetsTableCreateCompanionBuilder,
+      $$PointsResetsTableUpdateCompanionBuilder,
+      (
+        PointsReset,
+        BaseReferences<_$AppDatabase, $PointsResetsTable, PointsReset>,
+      ),
+      PointsReset,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2104,4 +2532,6 @@ class $AppDatabaseManager {
       $$EventGamesTableTableManager(_db, _db.eventGames);
   $$GameSetsTableTableManager get gameSets =>
       $$GameSetsTableTableManager(_db, _db.gameSets);
+  $$PointsResetsTableTableManager get pointsResets =>
+      $$PointsResetsTableTableManager(_db, _db.pointsResets);
 }

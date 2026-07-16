@@ -1,4 +1,14 @@
 import 'package:drift/drift.dart';
+import 'package:ladder2/src/database/database.dart';
+
+/// Which player won a [GameSet].
+enum WinningPlayer {
+  /// Player 1.
+  player1,
+
+  /// Player 2.
+  player2,
+}
 
 /// Add an [id] column.
 mixin IdMixin on Table {
@@ -38,4 +48,17 @@ class GameSets extends Table with IdMixin {
   /// The ID of the game this set is part of.
   IntColumn get gameId =>
       integer().references(EventGames, #id, onDelete: KeyAction.cascade)();
+
+  /// Which player won this set.
+  ///
+  /// If [winningPlayer] is [WinningPlayer.player1], then the winner is the
+  /// `player1Id` from the [EventGame]. Of it is [WinningPlayer.player2], then
+  /// `player2Id`.
+  IntColumn get winningPlayer => intEnum<WinningPlayer>()();
+}
+
+/// The points resets table.
+class PointsResets extends Table with IdMixin {
+  /// The date when the reset was enacted.
+  DateTimeColumn get when => dateTime().withDefault(currentDateAndTime)();
 }

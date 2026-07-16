@@ -9,7 +9,9 @@ import 'package:path_provider/path_provider.dart';
 part 'database.g.dart';
 
 /// The ladder database class.
-@DriftDatabase(tables: [Players, LadderEvents, EventGames, GameSets])
+@DriftDatabase(
+  tables: [Players, LadderEvents, EventGames, GameSets, PointsResets],
+)
 class AppDatabase extends _$AppDatabase {
   /// Create an instance.
   AppDatabase({final bool debug = false})
