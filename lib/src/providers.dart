@@ -49,7 +49,7 @@ final pointsResetProvider = FutureProvider<PointsReset?>((ref) {
 });
 
 /// All the events which have happened.
-final eventsProvider = FutureProvider<List<LadderEvent>>((ref) async {
+final ladderEventsProvider = FutureProvider<List<LadderEvent>>((ref) async {
   final db = ref.watch(databaseProvider);
   final reset = await ref.watch(pointsResetProvider.future);
   var query = db.managers.ladderEvents.orderBy((o) => o.when.desc());
