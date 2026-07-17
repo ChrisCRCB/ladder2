@@ -6,10 +6,35 @@ import 'package:ladder2/src/database/tables.dart';
 /// Provide the database.
 final databaseProvider = Provider((ref) => AppDatabase());
 
+/// How to order players.
+enum PlayerOrder {
+  /// Order by the name of players.
+  name,
+
+  /// Order by player points.
+  points,
+}
+
 /// Provide all players in the database.
-final playersProvider = FutureProvider<List<Player>>((ref) {
+final playersProvider = FutureProvider.family<List<Player>, PlayerOrder>((
+  ref,
+  final playerOrder,
+) async {
   final db = ref.watch(databaseProvider);
-  return db.managers.players.orderBy((o) => o.name.asc()).get();
+  switch (playerOrder) {
+    case PlayerOrder.name:
+      return db.managers.players.orderBy((o) => o.name.asc()).get();
+    case PlayerOrder.points:
+      final players = await db.managers.players.get();
+      final points = [
+        for (final player in players)
+          await ref.watch(playerPointsProvider(player).future),
+      ];
+      final everything = [
+        for (var i = 0; i < players.length; i++) (players[i], points[i]),
+      ]..sort((a, b) => a.$2.compareTo(b.$2));
+      return everything.map((e) => e.$1).toList();
+  }
 });
 
 /// Provides the most recent points reset.
