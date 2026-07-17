@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:ladder2/src/database/database.dart' show EventGame, GameSet;
 import 'package:ladder2/src/database/database.dart';
 
 /// Which player won a [GameSet].

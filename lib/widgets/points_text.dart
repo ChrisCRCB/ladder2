@@ -15,7 +15,7 @@ class PointsText extends ConsumerWidget {
   /// Build the widget.
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
-    final value = ref.watch(playerPointsProvider(player));
+    final value = ref.watch(playerPointsProvider(player.id));
     switch (value) {
       case AsyncLoading<int>():
         return const LoadingWidget();

@@ -2,9 +2,13 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ladder2/src/database/database.dart';
 import 'package:ladder2/src/database/tables.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'providers.g.dart';
 
 /// Provide the database.
-final databaseProvider = Provider((ref) => AppDatabase());
+@riverpod
+AppDatabase database(final Ref ref) => AppDatabase();
 
 /// How to order players.
 enum PlayerOrder {
@@ -17,7 +21,7 @@ enum PlayerOrder {
 
 /// Provide all players in the database.
 final playersProvider = FutureProvider.family<List<Player>, PlayerOrder>((
-  ref,
+  final ref,
   final playerOrder,
 ) async {
   final db = ref.watch(databaseProvider);
@@ -30,7 +34,7 @@ final playersProvider = FutureProvider.family<List<Player>, PlayerOrder>((
       final players = await db.managers.players.get();
       final points = [
         for (final player in players)
-          await ref.watch(playerPointsProvider(player).future),
+          await ref.watch(playerPointsProvider(player.id).future),
       ];
       final everything = [
         for (var i = 0; i < players.length; i++) (players[i], points[i]),
@@ -40,23 +44,22 @@ final playersProvider = FutureProvider.family<List<Player>, PlayerOrder>((
 });
 
 /// Provides the most recent points reset.
-///
-/// If no reset has ever happened, a dummy reset is generated with an ID of
-/// `-1`.
-final pointsResetProvider = FutureProvider<PointsReset?>((ref) {
+@riverpod
+Future<DateTime?> pointsResetWhen(final Ref ref) {
   final db = ref.watch(databaseProvider);
   return db.managers.pointsResets
       .orderBy((o) => o.when.desc())
-      .getSingleOrNull();
-});
+      .getSingleOrNull()
+      .then((reset) => reset?.when);
+}
 
 /// All the events which have happened.
 final ladderEventsProvider = FutureProvider<List<LadderEvent>>((ref) async {
   final db = ref.watch(databaseProvider);
-  final reset = await ref.watch(pointsResetProvider.future);
+  final resetWhen = await ref.watch(pointsResetWhenProvider.future);
   var query = db.managers.ladderEvents.orderBy((o) => o.when.desc());
-  if (reset != null) {
-    query = query.filter((f) => f.when.isAfterOrOn(reset.when));
+  if (resetWhen != null) {
+    query = query.filter((f) => f.when.isAfterOrOn(resetWhen));
   }
   return query.get();
 });
@@ -79,12 +82,12 @@ final playerGamesProvider = FutureProvider.family<List<EventGame>, Player>((
   final player,
 ) async {
   final db = ref.watch(databaseProvider);
-  final reset = await ref.watch(pointsResetProvider.future);
+  final resetWhen = await ref.watch(pointsResetWhenProvider.future);
   var query = db.managers.eventGames.filter(
     (f) => f.player1Id.id.equals(player.id) | f.player2Id.id.equals(player.id),
   );
-  if (reset != null) {
-    query = query.filter((f) => f.eventId.when.isAfterOrOn(reset.when));
+  if (resetWhen != null) {
+    query = query.filter((f) => f.eventId.when.isAfterOrOn(resetWhen));
   }
   return query.get();
 });
@@ -99,22 +102,30 @@ final gameSetsProvider = FutureProvider.family<List<GameSet>, EventGame>((
 });
 
 /// Provide the points for the given player.
-final playerPointsProvider = FutureProvider.family<int, Player>((
-  final ref,
-  final player,
-) async {
-  final games = await ref.watch(playerGamesProvider(player).future);
+@riverpod
+Future<int> playerPoints(final Ref ref, final int playerId) async {
+  final db = ref.watch(databaseProvider);
+  final resetWhen = await ref.watch(pointsResetWhenProvider.future);
+  var query = db.managers.eventGames.filter(
+    (f) => f.player1Id.id.equals(playerId) | f.player2Id.id.equals(playerId),
+  );
+  if (resetWhen != null) {
+    query = query.filter((f) => f.eventId.when.isAfterOrOn(resetWhen));
+  }
+  final games = await query.get();
   var points = 0;
   for (final game in games) {
-    final sets = await ref.watch(gameSetsProvider(game).future);
+    final sets = await db.managers.gameSets
+        .filter((f) => f.gameId.id.equals(game.id))
+        .get();
     for (final set in sets) {
-      if ((game.player1Id == player.id &&
+      if ((game.player1Id == playerId &&
               set.winningPlayer == WinningPlayer.player1) ||
-          (game.player2Id == player.id &&
+          (game.player2Id == playerId &&
               set.winningPlayer == WinningPlayer.player2)) {
         points++;
       }
     }
   }
   return points;
-});
+}
