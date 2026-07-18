@@ -2,13 +2,14 @@ import 'package:backstreets_widgets/extensions.dart';
 import 'package:backstreets_widgets/screens.dart';
 import 'package:backstreets_widgets/shortcuts.dart';
 import 'package:backstreets_widgets/widgets.dart';
-import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ladder2/src/database/database.dart';
 import 'package:ladder2/src/database/tables.dart';
 import 'package:ladder2/src/providers.dart';
+import 'package:ladder2/src/round_robin/round_robin_games.dart';
 import 'package:ladder2/widgets/async_value_builder.dart';
+import 'package:ladder2/widgets/date_text.dart';
 
 /// Show games for the given [event].
 class EventGamesScreen extends ConsumerWidget {
@@ -48,6 +49,24 @@ class EventGamesScreen extends ConsumerWidget {
                 );
                 return PerformableActionsListTile(
                   actions: [
+                    PerformableAction(
+                      name: 'Copy Schedule',
+                      activator: copyShortcut,
+                      invoke: () {
+                        final buffer = StringBuffer()
+                          ..writeln(
+                            'Schedule for ${dateFormatter.format(event.when)}:',
+                          );
+                        for (var i = 0; i < games.length; i++) {
+                          final row = games[i];
+                          buffer.writeln(
+                            // ignore: lines_longer_than_80_chars
+                            '#${i + 1}: ${row.player1.name} vs ${row.player2.name}',
+                          );
+                        }
+                        buffer.toString().copyToClipboard();
+                      },
+                    ),
                     PerformableAction(
                       name: 'Delete',
                       activator: deleteShortcut,
@@ -97,36 +116,13 @@ class EventGamesScreen extends ConsumerWidget {
         .filter((f) => f.id.equals(event.divisionId))
         .getSingle();
     final players = await ref.read(playersProvider(division).future);
-    final games = <EventGame>[];
-    for (var i = 0; i < (players.length - 1); i++) {
-      final player1 = players[i];
-      for (var j = i + 1; j < players.length; j++) {
-        final player2 = players[j];
-        final query = db.managers.eventGames.filter(
-          (f) =>
-              f.eventId.id.equals(event.id) &
-              f.player1Id.id.equals(player1.id) &
-              f.player2Id.id.equals(player2.id),
-        );
-        if (await query.getSingleOrNull() == null) {
-          games.add(
-            EventGame(
-              id: -1,
-              eventId: event.id,
-              player1Id: player1.id,
-              player2Id: player2.id,
-            ),
-          );
-        }
-      }
-    }
-    games.shuffle();
+    final games = roundRobinGames(players.map((player) => player.id).toList());
     for (final game in games) {
       await db.managers.eventGames.create(
         (o) => o(
           eventId: event.id,
-          player1Id: game.player1Id,
-          player2Id: game.player2Id,
+          player1Id: game.player1,
+          player2Id: game.player2,
         ),
       );
     }

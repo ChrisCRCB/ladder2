@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+/// The format to use for dates.
+final dateFormatter = DateFormat('EEEE dd MMMM y');
+
 /// A widget which shows [date] in a human-readable format.
 class DateText extends StatelessWidget {
   /// Create an instance.
@@ -12,7 +15,7 @@ class DateText extends StatelessWidget {
   /// Build the widget.
   @override
   Widget build(final BuildContext context) {
-    final dateFormat = DateFormat('EEEE dd MMMM y').format(date);
+    final dateFormat = dateFormatter.format(date);
     return Text(dateFormat);
   }
 }

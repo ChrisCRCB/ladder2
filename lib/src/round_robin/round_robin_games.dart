@@ -1,10 +1,7 @@
 import 'package:ladder2/src/round_robin/round_robin_game.dart';
 
 /// Returns a list of games for a round robin event.
-List<RoundRobinGame<T>> roundRobinGames<T>(
-  final List<T> players, {
-  final bool jumpy = false,
-}) {
+List<RoundRobinGame<T>> roundRobinGames<T>(final List<T> players) {
   if (players.length < 2) {
     throw StateError('At least 2 players must be provided.');
   }
@@ -33,7 +30,7 @@ List<RoundRobinGame<T>> roundRobinGames<T>(
       }
     }
     if (game == null) {
-      if (popLast || !jumpy) {
+      if (popLast) {
         popLast = false;
         game = unorderedGames.removeLast();
       } else {
