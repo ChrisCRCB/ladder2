@@ -4,6 +4,7 @@ import 'package:backstreets_widgets/shortcuts.dart';
 import 'package:backstreets_widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ladder2/screens/game_sets_screen.dart';
 import 'package:ladder2/src/database/database.dart';
 import 'package:ladder2/src/database/tables.dart';
 import 'package:ladder2/src/providers.dart';
@@ -32,7 +33,7 @@ class EventGamesScreen extends ConsumerWidget {
           body: AsyncValueBuilder(
             value: value,
             builder: (games) => ListView.builder(
-              itemBuilder: (_, index) {
+              itemBuilder: (context, index) {
                 final row = games[index];
                 final game = row.game;
                 final player1 = row.player1;
@@ -93,7 +94,9 @@ class EventGamesScreen extends ConsumerWidget {
                     '#${index + 1}: ${player1.name} vs ${player2.name}',
                   ),
                   subtitle: Text('$player1Points : $player2Points'),
-                  onTap: () {},
+                  onTap: () => context.pushWidgetBuilder(
+                    (_) => GameSetsScreen(game: game),
+                  ),
                 );
               },
               itemCount: games.length,

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ladder2/src/database/database.dart';
 import 'package:ladder2/src/database/tables.dart';
+import 'package:ladder2/src/game_context.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'providers.g.dart';
@@ -49,32 +50,9 @@ final ladderEventsProvider =
       return query.get();
     });
 
-/// Hold a reference to a [game] and its players.
-class GamePlayers {
-  /// Create an instance.
-  const GamePlayers({
-    required this.game,
-    required this.player1,
-    required this.player2,
-    required this.sets,
-  });
-
-  /// The game to use.
-  final EventGame game;
-
-  /// The [game]'s player 1.
-  final Player player1;
-
-  /// The [game]'s player 2.
-  final Player player2;
-
-  /// The sets for this game.
-  final List<GameSet> sets;
-}
-
 /// Provide all games for the given event.
 final eventGamesProvider =
-    FutureProvider.family<List<GamePlayers>, LadderEvent>((
+    FutureProvider.family<List<GameContext>, LadderEvent>((
       ref,
       final event,
     ) async {
@@ -83,33 +61,36 @@ final eventGamesProvider =
           .filter((f) => f.eventId.id.equals(event.id))
           .orderBy((o) => o.id.asc())
           .get();
-      final games = <GamePlayers>[];
-      final players = <int, Player>{};
+      final games = <GameContext>[];
       for (final game in rows) {
-        final player1 =
-            players[game.player1Id] ??
-            await db.managers.players
-                .filter((f) => f.id.equals(game.player1Id))
-                .getSingle();
-        players[player1.id] = player1;
-        final player2 =
-            players[game.player2Id] ??
-            await db.managers.players
-                .filter((f) => f.id.equals(game.player2Id))
-                .getSingle();
-        players[player2.id] = player2;
-        final sets = await ref.watch(gameSetsProvider(game).future);
-        games.add(
-          GamePlayers(
-            game: game,
-            player1: player1,
-            player2: player2,
-            sets: sets,
-          ),
-        );
+        games.add(await ref.watch(eventGameProvider(game).future));
       }
       return games;
     });
+
+/// Provide context for a single game.
+final eventGameProvider = FutureProvider.family<GameContext, EventGame>((
+  final ref,
+  final game,
+) async {
+  final db = ref.watch(databaseProvider);
+  final player1 = await db.managers.players
+      .filter((f) => f.id.equals(game.player1Id))
+      .getSingle();
+  final player2 = await db.managers.players
+      .filter((f) => f.id.equals(game.player2Id))
+      .getSingle();
+  final sets = await ref.watch(gameSetsProvider(game).future);
+  return GameContext(
+    event: await db.managers.ladderEvents
+        .filter((f) => f.id.equals(game.eventId))
+        .getSingle(),
+    game: game,
+    player1: player1,
+    player2: player2,
+    sets: sets,
+  );
+});
 
 /// Provide all the games the given player has played.
 final playerGamesProvider = FutureProvider.family<List<EventGame>, Player>((
