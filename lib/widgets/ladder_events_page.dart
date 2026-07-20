@@ -11,6 +11,7 @@ import 'package:ladder2/src/database/database.dart';
 import 'package:ladder2/src/providers.dart';
 import 'package:ladder2/widgets/async_value_builder.dart';
 import 'package:ladder2/widgets/date_text.dart';
+import 'package:ladder2/widgets/date_time_actions.dart';
 
 /// The events page.
 class LadderEventsPage extends ConsumerWidget {
@@ -40,6 +41,13 @@ class LadderEventsPage extends ConsumerWidget {
             final query = db.managers.ladderEvents.filter(
               (f) => f.id.equals(event.id),
             );
+            final dateTimeActions = DateTimeActions(
+              dateTime: event.when,
+              onChanged: (final dateTime) async {
+                await query.update((o) => o(when: Value(dateTime)));
+                ref.invalidate(ladderEventsProvider(division));
+              },
+            );
             final name = event.name;
             return PerformableActionsListTile(
               actions: [
@@ -63,32 +71,7 @@ class LadderEventsPage extends ConsumerWidget {
                     ),
                   ),
                 ),
-                PerformableAction(
-                  name: 'Move Back',
-                  activator: moveUpShortcut,
-                  invoke: () async {
-                    await query.update(
-                      (o) => o(
-                        when: Value(
-                          event.when.subtract(const Duration(days: 1)),
-                        ),
-                      ),
-                    );
-                    ref.invalidate(ladderEventsProvider);
-                  },
-                ),
-                PerformableAction(
-                  name: 'Move Forward',
-                  activator: moveDownShortcut,
-                  invoke: () async {
-                    await query.update(
-                      (o) => o(
-                        when: Value(event.when.add(const Duration(days: 1))),
-                      ),
-                    );
-                    ref.invalidate(ladderEventsProvider);
-                  },
-                ),
+                ...dateTimeActions.actions,
                 PerformableAction(
                   name: 'Delete',
                   activator: deleteShortcut,
@@ -106,16 +89,6 @@ class LadderEventsPage extends ConsumerWidget {
                         );
                       }
                     }
-                  },
-                ),
-                PerformableAction(
-                  name: 'Set To Today',
-                  activator: CrossPlatformSingleActivator(
-                    LogicalKeyboardKey.keyT,
-                  ),
-                  invoke: () async {
-                    await query.update((o) => o(when: Value(DateTime.now())));
-                    ref.invalidate(ladderEventsProvider);
                   },
                 ),
               ],
