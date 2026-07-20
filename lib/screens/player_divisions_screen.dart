@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ladder2/screens/main_screen.dart';
 import 'package:ladder2/src/providers.dart';
 import 'package:ladder2/widgets/async_value_builder.dart';
+import 'package:ladder2/widgets/date_text.dart';
+import 'package:ladder2/widgets/date_time_actions.dart';
 
 /// The screen which shows all player divisions.
 class PlayerDivisionsScreen extends ConsumerWidget {
@@ -32,6 +34,18 @@ class PlayerDivisionsScreen extends ConsumerWidget {
               final query = db.managers.playerDivisions.filter(
                 (f) => f.id.equals(division.id),
               );
+              final dateTimeActions = DateTimeActions(
+                dateTime: division.lastPointsReset,
+                onChanged: (dateTime) async {
+                  await query.update(
+                    (o) => o(lastPointsReset: Value(dateTime)),
+                  );
+                  ref
+                    ..invalidate(playerDivisionsProvider)
+                    ..invalidate(playersProvider(division))
+                    ..invalidate(ladderEventsProvider(division));
+                },
+              );
               return PerformableActionsListTile(
                 actions: [
                   PerformableAction(
@@ -52,6 +66,7 @@ class PlayerDivisionsScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  ...dateTimeActions.actions,
                   PerformableAction(
                     name: 'Delete',
                     activator: deleteShortcut,
@@ -89,6 +104,7 @@ class PlayerDivisionsScreen extends ConsumerWidget {
                 ],
                 autofocus: index == 0,
                 title: Text(division.name),
+                subtitle: DateText(date: division.lastPointsReset),
                 onTap: () => context.pushWidgetBuilder(
                   (_) => MainScreen(division: division),
                 ),
