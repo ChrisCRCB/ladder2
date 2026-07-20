@@ -123,7 +123,6 @@ final playerPointsProvider = FutureProvider.family<int, Player>((
   final db = ref.watch(databaseProvider);
   final games = await ref.watch(playerGamesProvider(player).future);
   var points = 0;
-  print('Games for $player:');
   for (final game in games) {
     final sets = await db.managers.gameSets
         .filter((f) => f.gameId.id.equals(game.id))
